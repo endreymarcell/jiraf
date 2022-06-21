@@ -49,6 +49,19 @@ case $1 in
     fi
     cat "$jiraf_cache" | fzf | awk '{print $1}' > $jiraf_ticket_file
     ;;
+  branch)
+    if [[ "$2" == "" ]]; then
+      echo "Error: Missing ticket id"
+      echo "Usage: jiraf branch branch-name-after-ticket-id"
+      exit 1
+    fi
+    current_issue_id="$(cat $jiraf_ticket_file | xargs)"
+    if [[ "$current_issue_id" = "" ]]; then
+      echo "Error: no issue is selected, run jiraf set or jiraf pick first"
+      exit 1
+    fi
+    git new-branch "${current_issue_id}-$2"
+    ;;
   pr)
     if [[ "$2" == "" ]]; then
       echo "Error: Missing PR title"
@@ -57,7 +70,7 @@ case $1 in
     fi
     current_issue_id="$(cat $jiraf_ticket_file | xargs)"
     if [[ "$current_issue_id" = "" ]]; then
-      echo "Error: no issue is selected"
+      echo "Error: no issue is selected, run jiraf set or jiraf pick first"
       exit 1
     fi
     prepare_pr_body "$current_issue_id"
