@@ -9,9 +9,22 @@ const jira = new JiraClient({
   strictSSL: true,
 });
 
-const foo = await jira.searchJira(`assignee=currentuser()`, {  fields: ['summary', 'status'] })
-console.log(JSON.stringify(foo.issues.map(issue => ({
-  key: issue.key,
-  summary: issue.fields.summary,
-  status: issue.fields.status.name,
-})), null, 2));
+async function getMyIssues() {
+  const rawIssues = await jira.searchJira(`assignee=currentuser() AND status != 'Done'`, {fields: ['summary', 'status']})
+  return rawIssues.issues.map(parseIssue)
+}
+
+function parseIssue(issue) {
+  return {
+    key: issue.key,
+    summary: issue.fields.summary,
+    status: issue.fields.status.name,
+  }
+}
+
+function formatIssue({ key, summary, status }) {
+  return `${key} ${summary} (${status})`
+}
+
+const myIssues = await getMyIssues()
+console.log(myIssues.map(formatIssue).join('\n'));
