@@ -1,16 +1,39 @@
 import JiraClient from "jira-client";
+import dotenv from "dotenv";
 
-const jira = new JiraClient({
-  protocol: "https",
-  host: process.env.JIRA_API_HOST,
-  username: process.env.JIRA_USERNAME,
-  password: process.env.JIRA_TOKEN,
-  apiVersion: "2",
-  strictSSL: true,
-});
+dotenv.config();
+
+function getJiraClient() {
+  const {JIRA_API_HOST, JIRA_USERNAME, JIRA_API_TOKEN} = getCredentialsFromEnv();
+  return new JiraClient({
+    protocol: "https",
+    host: JIRA_API_HOST,
+    username: JIRA_USERNAME,
+    password: JIRA_API_TOKEN,
+    apiVersion: "2",
+    strictSSL: true,
+  });
+}
+
+function getCredentialsFromEnv() {
+  const vars = [
+    "JIRA_API_HOST",
+    "JIRA_USERNAME",
+    "JIRA_API_TOKEN",
+  ]
+  for (const envVar of vars) {
+    if (process.env[envVar] === undefined) {
+      console.error(`${envVar} is undefined!`)
+      process.exit(1)
+    }
+  }
+  return Object.fromEntries(vars.map(varName => [varName, process.env[varName]]))
+}
 
 async function getMyIssues() {
-  const rawIssues = await jira.searchJira(`assignee=currentuser() AND status != 'Done'`, {fields: ['summary', 'status']})
+  const query = `assignee=currentuser() AND status != 'Done'`;
+  const options = {fields: ['summary', 'status']}
+  const rawIssues = await getJiraClient().searchJira(query, options)
   return rawIssues.issues.map(parseIssue)
 }
 
