@@ -43,6 +43,12 @@ case $1 in
   r*)
     load_issues
     ;;
+  l*s*)
+    if [[ ! -f "$jiraf_cache" ]]; then
+      load_issues
+    fi
+    cat "$jiraf_cache"
+    ;;
   pick)
     if [[ ! -f "$jiraf_cache" ]]; then
       load_issues
