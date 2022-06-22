@@ -47,7 +47,13 @@ case $1 in
     if [[ ! -f "$jiraf_cache" ]]; then
       load_issues
     fi
-    cat "$jiraf_cache"
+    current_issue_id="$(cat $jiraf_ticket_file | xargs)"
+    if [[ "$current_issue_id" = "" ]]; then
+      cat $jiraf_cache
+    else
+      echo '*' "$(cat "$jiraf_cache" | grep $current_issue_id | xargs)"
+      cat "$jiraf_cache" | grep -v $current_issue_id
+    fi
     ;;
   pick)
     if [[ ! -f "$jiraf_cache" ]]; then
