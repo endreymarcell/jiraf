@@ -37,12 +37,15 @@ case $1 in
     echo "$2" > $jiraf_ticket_file
     exit 0
     ;;
+
   unset)
     echo "" > $jiraf_ticket_file
     ;;
+
   r*)
     load_issues
     ;;
+
   l*s*)
     if [[ ! -f "$jiraf_cache" ]]; then
       load_issues
@@ -55,12 +58,14 @@ case $1 in
       cat "$jiraf_cache" | grep -v $current_issue_id
     fi
     ;;
+
   pick)
     if [[ ! -f "$jiraf_cache" ]]; then
       load_issues
     fi
     cat "$jiraf_cache" | fzf | awk '{print $1}' > $jiraf_ticket_file
     ;;
+
   branch)
     if [[ "$2" == "" ]]; then
       echo "Error: Missing ticket id"
@@ -74,6 +79,7 @@ case $1 in
     fi
     git new-branch "${current_issue_id}-$2"
     ;;
+
   pr)
     if [[ "$2" == "" ]]; then
       echo "Error: Missing PR title"
@@ -88,6 +94,7 @@ case $1 in
     prepare_pr_body "$current_issue_id"
     gh pr create --title "'[$current_issue_id] $2'" --label 'change:standard' --body-file $jiraf_pr_body
     ;;
+
   *)
     echo anything else
     ;;
