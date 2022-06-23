@@ -92,7 +92,7 @@ case $1 in
       exit 1
     fi
     prepare_pr_body "$current_issue_id"
-    gh pr create --title "'[$current_issue_id] $2'" --label 'change:standard' --body-file $jiraf_pr_body
+    gh pr create --title "[$current_issue_id] $2" --label 'change:standard' --body-file $jiraf_pr_body
     ;;
 
   *)
