@@ -54,7 +54,7 @@ case $1 in
     if [[ "$current_issue_id" = "" ]]; then
       cat $jiraf_cache
     else
-      echo '*' "$(cat "$jiraf_cache" | grep $current_issue_id | xargs)"
+      echo -e '\e[92m*' "$(cat "$jiraf_cache" | grep $current_issue_id | xargs)" '\e[39m'
       cat "$jiraf_cache" | grep -v $current_issue_id
     fi
     ;;
