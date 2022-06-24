@@ -1,7 +1,11 @@
+import * as path from "path";
+import {fileURLToPath} from 'url';
 import JiraClient from "jira-client";
 import dotenv from "dotenv";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 function getJiraClient() {
   const {JIRA_API_HOST, JIRA_USERNAME, JIRA_API_TOKEN} = getCredentialsFromEnv();
