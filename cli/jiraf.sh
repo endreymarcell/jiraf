@@ -2,15 +2,19 @@
 set -eo pipefail
 
 jiraf_home=$HOME/.jiraf
-jiraf_cache=$jiraf_home/.jiraf-cache
 jiraf_ticket_file=$jiraf_home/.jiraf-issue
 jiraf_pr_body=$jiraf_home/.pr-body
+
 
 issue_url_root="https://transferwise.atlassian.net/browse/"
 
 function load_issues() {
+  curl --silent "$1/issues"
+}
+
+function reload_issues() {
   echo Updating cache...
-  node $HOME/code/jiraf/index.mjs > $jiraf_cache
+  curl --silent -XPOST "$1/refresh"
 }
 
 function prepare_pr_body() {
@@ -32,6 +36,9 @@ function print_help() {
 --- JIRAF ---
 Manage Jira issues easily.
 
+Startup:
+  jiraf start - start the server
+
 Viewing issues:
   jiraf refresh - load issues from Jira (shortcut: r)
   jiraf list - list my issues (shortcut: ls)
@@ -48,6 +55,15 @@ EOF
 }
 
 case $1 in
+  start)
+    deno run \
+      --allow-net \
+      --allow-read \
+      --allow-write \
+      --allow-env \
+      $HOME/code/jiraf/server/server.ts
+    ;;
+
   set)
     if [[ "$2" == "" ]]; then
       echo "Error: Missing ticket id"
@@ -63,27 +79,29 @@ case $1 in
     ;;
 
   r*)
-    load_issues
+    jiraf_server_port="$(lsof -i -n -P | grep LISTEN | grep deno | awk '{print $(NF-1)}' | tr -d '*' | xargs)"
+    jiraf_server_uri="localhost${jiraf_server_port}"
+    reload_issues $jiraf_server_uri
     ;;
 
   l*s*)
-    if [[ ! -f "$jiraf_cache" ]]; then
-      load_issues
-    fi
+    jiraf_server_port="$(lsof -i -n -P | grep LISTEN | grep deno | awk '{print $(NF-1)}' | tr -d '*' | xargs)"
+    jiraf_server_uri="localhost${jiraf_server_port}"
+    cache="$(load_issues $jiraf_server_uri)"
     current_issue_id="$(cat $jiraf_ticket_file | xargs)"
     if [[ "$current_issue_id" = "" ]]; then
-      cat $jiraf_cache
+      echo "$cache"
     else
-      echo -e '\e[92m*' "$(cat "$jiraf_cache" | grep $current_issue_id | xargs)" '\e[39m'
-      cat "$jiraf_cache" | grep -v $current_issue_id
+      echo -e '\e[92m*' "$(echo "$cache" | grep $current_issue_id | xargs)" '\e[39m'
+      echo "$cache" | grep -v $current_issue_id
     fi
     ;;
 
   pick)
-    if [[ ! -f "$jiraf_cache" ]]; then
-      load_issues
-    fi
-    cat "$jiraf_cache" | fzf | awk '{print $1}' > $jiraf_ticket_file
+    jiraf_server_port="$(lsof -i -n -P | grep LISTEN | grep deno | awk '{print $(NF-1)}' | tr -d '*' | xargs)"
+    jiraf_server_uri="localhost${jiraf_server_port}"
+    cache="$(load_issues $jiraf_server_uri)"
+    echo "$cache" | fzf | awk '{print $1}' > $jiraf_ticket_file
     ;;
 
   branch)

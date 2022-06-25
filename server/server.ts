@@ -2,6 +2,10 @@ import * as path from "https://deno.land/std@0.145.0/path/mod.ts";
 import { readJsonSync } from "https://deno.land/x/jsonfile@1.0.0/mod.ts";
 import { Base64 } from "https://deno.land/x/bb64@1.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.119.0/http/server.ts";
+import home_dir from "https://deno.land/x/dir@v1.0.0/home_dir/mod.ts";
+
+let currentIssueKey: string | null = null;
+let cache = "";
 
 type Credentials = {
   JIRA_API_HOST: string;
@@ -27,7 +31,7 @@ type Issue = {
 
 function getCredentials() {
   const credentialsPath = path.join(
-    Deno.env.get("HOME") ?? ".",
+    home_dir() ?? ".",
     "code",
     "jiraf",
     ".credentials.json"
@@ -62,22 +66,27 @@ function formatIssue({ key, summary, status }: Issue) {
 }
 
 async function loadIssues() {
+  console.log("Deno go fetch...");
   const issues = await getMyIssues();
-  const outputPath = path.join(
-    Deno.env.get("HOME") ?? ".",
-    ".jiraf",
-    ".jiraf-cache"
-  );
+  cache = issues.map(formatIssue).join("\n");
+  const outputPath = path.join(home_dir() ?? ".", ".jiraf", ".jiraf-cache");
   await Deno.writeTextFile(outputPath, issues.map(formatIssue).join("\n"));
+  console.log("Deno done good.");
 }
 
-// loadIssues();
+async function handler(request: Request): Promise<Response> {
+  if (request.method === "GET" && request.url.endsWith("/issues")) {
+    return new Response(cache);
+  }
 
-function handler(_req: Request): Response {
-  return new Response("Hello, World!");
+  if (request.method === "POST" && request.url.endsWith("/refresh")) {
+    console.log("Refreshing...");
+    await loadIssues();
+    return new Response("Done.");
+  }
+  return new Response("OK");
 }
 
-console.log("Listening on http://localhost:8000\nPress Ctrl-C to quit");
-serve(handler);
-
-setInterval(() => console.log("Erre csörög a dió!"), 5000);
+const port = 6008;
+console.log(`Listening on http://localhost:${port}\nPress Ctrl-C to quit`);
+serve(handler, { port });
