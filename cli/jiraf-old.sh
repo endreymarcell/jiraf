@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
 
 jiraf_home=$HOME/.jiraf
 jiraf_cache=$jiraf_home/.jiraf-cache
@@ -25,6 +25,26 @@ function prepare_pr_body() {
   head -1 $template > $jiraf_pr_body
   echo "${issue_url_root}${local_current_issue_id}" >> $jiraf_pr_body
   tail -n +2 $template | sed 's/\[ \]/[x]/' >> $jiraf_pr_body
+}
+
+function print_help() {
+  cat <<EOF
+--- JIRAF ---
+Manage Jira issues easily.
+
+Viewing issues:
+  jiraf refresh - load issues from Jira (shortcut: r)
+  jiraf list - list my issues (shortcut: ls)
+
+Picking issues:
+  jiraf set {id} - set the given id as the current issue
+  jiraf unset - remove issue id if set
+  jiraf pick - choose issue interactively
+
+Using git:
+  jiraf branch {name} - create git branch prefixed with the current issue id
+  jiraf pr {title} - open a github pull request
+EOF
 }
 
 case $1 in
@@ -97,6 +117,7 @@ case $1 in
     ;;
 
   *)
-    echo anything else
+    print_help
+    exit 1
     ;;
 esac
