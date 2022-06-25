@@ -5,16 +5,24 @@ jiraf_home=$HOME/.jiraf
 jiraf_ticket_file=$jiraf_home/.jiraf-issue
 jiraf_pr_body=$jiraf_home/.pr-body
 
-
 issue_url_root="https://transferwise.atlassian.net/browse/"
 
+function get_server_uri() {
+  jiraf_server_port="$(lsof -i -n -P | grep LISTEN | grep deno | awk '{print $(NF-1)}' | tr -d '*' | xargs)"
+  jiraf_server_uri="localhost${jiraf_server_port}"
+  echo "$jiraf_server_uri"
+}
+
 function load_issues() {
-  curl --silent "$1/issues"
+  local server_uri="$(get_server_uri)"
+  curl --silent "$server_uri/issues"
 }
 
 function reload_issues() {
   echo Updating cache...
-  curl --silent -XPOST "$1/refresh"
+  local server_uri="$(get_server_uri)"
+  curl --silent -XPOST "$server_uri/refresh" >/dev/null
+  echo Done.
 }
 
 function prepare_pr_body() {
@@ -79,15 +87,11 @@ case $1 in
     ;;
 
   r*)
-    jiraf_server_port="$(lsof -i -n -P | grep LISTEN | grep deno | awk '{print $(NF-1)}' | tr -d '*' | xargs)"
-    jiraf_server_uri="localhost${jiraf_server_port}"
-    reload_issues $jiraf_server_uri
+    reload_issues
     ;;
 
   l*s*)
-    jiraf_server_port="$(lsof -i -n -P | grep LISTEN | grep deno | awk '{print $(NF-1)}' | tr -d '*' | xargs)"
-    jiraf_server_uri="localhost${jiraf_server_port}"
-    cache="$(load_issues $jiraf_server_uri)"
+    cache="$(load_issues)"
     current_issue_id="$(cat $jiraf_ticket_file | xargs)"
     if [[ "$current_issue_id" = "" ]]; then
       echo "$cache"
@@ -98,9 +102,7 @@ case $1 in
     ;;
 
   pick)
-    jiraf_server_port="$(lsof -i -n -P | grep LISTEN | grep deno | awk '{print $(NF-1)}' | tr -d '*' | xargs)"
-    jiraf_server_uri="localhost${jiraf_server_port}"
-    cache="$(load_issues $jiraf_server_uri)"
+    cache="$(load_issues)"
     echo "$cache" | fzf | awk '{print $1}' > $jiraf_ticket_file
     ;;
 
