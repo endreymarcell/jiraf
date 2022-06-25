@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+cmd="${1:-start}"
+
+case "$cmd" in
+  start)
+    deno run --allow-net --allow-read --allow-write --allow-env server.ts
+    ;;
+
+  *)
+    echo Unknown command
+    exit 1
+    ;;
+esac
