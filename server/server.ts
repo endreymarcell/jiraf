@@ -1,6 +1,7 @@
 import * as path from "https://deno.land/std@0.145.0/path/mod.ts";
 import { readJsonSync } from "https://deno.land/x/jsonfile@1.0.0/mod.ts";
 import { Base64 } from "https://deno.land/x/bb64@1.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.119.0/http/server.ts";
 
 type Credentials = {
   JIRA_API_HOST: string;
@@ -70,12 +71,13 @@ async function loadIssues() {
   await Deno.writeTextFile(outputPath, issues.map(formatIssue).join("\n"));
 }
 
-loadIssues();
+// loadIssues();
 
-/*
 function handler(_req: Request): Response {
   return new Response("Hello, World!");
-}*/
+}
 
-// console.log("Listening on http://localhost:8000");
-// serve(handler);
+console.log("Listening on http://localhost:8000\nPress Ctrl-C to quit");
+serve(handler);
+
+setInterval(() => console.log("Erre csörög a dió!"), 5000);
