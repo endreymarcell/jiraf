@@ -4,7 +4,6 @@ import { Base64 } from "https://deno.land/x/bb64@1.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.119.0/http/server.ts";
 import home_dir from "https://deno.land/x/dir@v1.0.0/home_dir/mod.ts";
 
-let currentIssueKey: string | null = null;
 let cache = "";
 
 type Credentials = {

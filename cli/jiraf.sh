@@ -2,7 +2,8 @@
 set -eo pipefail
 
 jiraf_home=$HOME/.jiraf
-jiraf_ticket_file=$jiraf_home/.jiraf-issue
+jiraf_issue_key_file=$jiraf_home/.jiraf-issue-key
+jiraf_issue_desc_file=$jiraf_home/.jiraf-issue-desc
 jiraf_pr_body=$jiraf_home/.pr-body
 
 issue_url_root="https://transferwise.atlassian.net/browse/"
@@ -78,12 +79,15 @@ case $1 in
       echo "Usage: jiraf set JIRA-123"
       exit 1
     fi
-    echo "$2" > $jiraf_ticket_file
+    echo "$2" > $jiraf_issue_key_file
+    cache="$(load_issues)"
+    key_and_desc="$(echo "$cache" | grep "$2")}"
+    echo "$key_and_desc" | cut -d' ' -f2- > $jiraf_issue_desc_file
     exit 0
     ;;
 
   unset)
-    echo "" > $jiraf_ticket_file
+    echo "" > $jiraf_issue_key_file
     ;;
 
   r*)
@@ -92,18 +96,20 @@ case $1 in
 
   l*s*)
     cache="$(load_issues)"
-    current_issue_id="$(cat $jiraf_ticket_file | xargs)"
-    if [[ "$current_issue_id" = "" ]]; then
+    current_issue_key="$(cat $jiraf_issue_key_file | xargs)"
+    if [[ "$current_issue_key" = "" ]]; then
       echo "$cache"
     else
-      echo -e '\e[92m*' "$(echo "$cache" | grep $current_issue_id | xargs)" '\e[39m'
-      echo "$cache" | grep -v $current_issue_id
+      echo -e '\e[92m*' "$(echo "$cache" | grep $current_issue_key | xargs)" '\e[39m'
+      echo "$cache" | grep -v $current_issue_key
     fi
     ;;
 
   pick)
     cache="$(load_issues)"
-    echo "$cache" | fzf | awk '{print $1}' > $jiraf_ticket_file
+    key_and_desc="$(echo "$cache" | fzf)"
+    echo "$key_and_desc" | awk '{print $1}' > $jiraf_issue_key_file
+    echo "$key_and_desc" | cut -d' ' -f2- > $jiraf_issue_desc_file
     ;;
 
   branch)
@@ -112,12 +118,12 @@ case $1 in
       echo "Usage: jiraf branch branch-name-after-ticket-id"
       exit 1
     fi
-    current_issue_id="$(cat $jiraf_ticket_file | xargs)"
-    if [[ "$current_issue_id" = "" ]]; then
+    current_issue_key="$(cat $jiraf_issue_key_file | xargs)"
+    if [[ "$current_issue_key" = "" ]]; then
       echo "Error: no issue is selected, run jiraf set or jiraf pick first"
       exit 1
     fi
-    git new-branch "${current_issue_id}-$2"
+    git new-branch "${current_issue_key}-$2"
     ;;
 
   pr)
@@ -126,13 +132,13 @@ case $1 in
       echo "Usage: jiraf pr 'Fix all of the things'"
       exit 1
     fi
-    current_issue_id="$(cat $jiraf_ticket_file | xargs)"
-    if [[ "$current_issue_id" = "" ]]; then
+    current_issue_key="$(cat $jiraf_issue_key_file | xargs)"
+    if [[ "$current_issue_key" = "" ]]; then
       echo "Error: no issue is selected, run jiraf set or jiraf pick first"
       exit 1
     fi
-    prepare_pr_body "$current_issue_id"
-    gh pr create --title "[$current_issue_id] $2" --label 'change:standard' --body-file $jiraf_pr_body
+    prepare_pr_body "$current_issue_key"
+    gh pr create --title "[$current_issue_key] $2" --label 'change:standard' --body-file $jiraf_pr_body
     gh pr view --web
     ;;
 

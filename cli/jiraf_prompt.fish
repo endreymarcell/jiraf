@@ -1,12 +1,8 @@
 function jiraf_prompt
-  set -l jiraf_cache_file $HOME/.jiraf/.jiraf-cache
-  set -l current_ticket_id (cat ~/.jiraf/.jiraf-issue | xargs)
-  if test -n "$current_ticket_id"
-    if test -f $jiraf_cache_file
-      echo " $(grep $current_ticket_id $jiraf_cache_file | xargs)"
-    else
-      echo " $current_ticket_id"
-    end
+  set -l current_ticket_key (cat ~/.jiraf/.jiraf-issue-key | xargs)
+  set -l current_ticket_desc (cat ~/.jiraf/.jiraf-issue-desc | xargs)
+  if test -n "$current_ticket_key" -a -n "$current_ticket_desc"
+    echo " ${current_ticket_key} ${current_ticket_desc}"
   else
     echo ""
   end
