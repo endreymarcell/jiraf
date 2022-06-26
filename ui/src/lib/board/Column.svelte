@@ -20,7 +20,7 @@
   </script>
 
 <div data-status={status} class="w-full h-screen bg-neutral-100">
-  <div class={`w-full h-10 flex justify-center items-center ${headingBgColor} uppercase tracking-wider text-xl`}>{title}</div>
+  <div class={`w-full h-10 flex justify-center items-center ${headingBgColor} uppercase tracking-wider text-xl border-white border-x-4`}>{title}</div>
   {#each issuesInColumn as {key, title}}
     <Card {key} {title} />
   {/each}
