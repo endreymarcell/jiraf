@@ -2,36 +2,47 @@ import { writable } from "svelte/store";
 
 export const isDraggingCard = writable(false);
 
-export function drag(element: HTMLElement) {
-  let offsetX = 0;
-  let offsetY = 0;
+function calculateOffset(element: HTMLElement, event: MouseEvent) {
+  const initialElementX = element.offsetLeft;
+  const initialElementY = element.offsetTop;
+  const initialMouseX = event.pageX;
+  const initialMouseY = event.pageY;
+  return {
+    x: initialMouseX - initialElementX,
+    y: initialMouseY - initialElementY,
+  };
+}
 
-  element.addEventListener("mousedown", (event) => {
+function getClone(element: HTMLElement) {
+  const shouldCloneChildren = true;
+  const clone = element.cloneNode(shouldCloneChildren);
+  clone.style.position = "absolute";
+  clone.style.width = `${element.clientWidth + 4}px`;
+  clone.classList.add("shadow-lg");
+  return clone;
+}
+
+function moveElementToMousePosition(
+  element: HTMLElement,
+  event: MouseEvent,
+  offset: { x: number; y: number }
+) {
+  element.style.top = `${event.pageY - offset.y}px`;
+  element.style.left = `${event.pageX - offset.x}px`;
+}
+
+export function drag(element: HTMLElement) {
+  element.addEventListener("mousedown", (clickEvent) => {
     isDraggingCard.set(true);
 
-    const initialElementWidth = element.clientWidth;
-    const initialElementX = element.offsetLeft;
-    const initialElementY = element.offsetTop;
-    const initialMouseX = event.pageX;
-    const initialMouseY = event.pageY;
-    offsetX = initialMouseX - initialElementX;
-    offsetY = initialMouseY - initialElementY;
-
-    const shouldCloneChildren = true;
-    const clone = element.cloneNode(shouldCloneChildren);
-
-    clone.style.position = "absolute";
-    clone.style.width = `${initialElementWidth + 4}px`;
-    clone.style.top = `${event.pageY - offsetY}px`;
-    clone.style.left = `${event.pageX - offsetX}px`;
-    clone.classList.add("shadow-lg");
-
+    const offset = calculateOffset(element, clickEvent);
+    const clone = getClone(element);
     document.body.appendChild(clone);
+    moveElementToMousePosition(clone, clickEvent, offset);
     element.classList.add("invisible");
 
-    const handleMouseMove = (event: MouseEvent) => {
-      clone.style.top = `${event.pageY - offsetY}px`;
-      clone.style.left = `${event.pageX - offsetX}px`;
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      moveElementToMousePosition(clone, moveEvent, offset);
     };
 
     const handleMouseUp = () => {
