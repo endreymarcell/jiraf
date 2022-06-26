@@ -1,4 +1,5 @@
 import { writable } from "svelte/store";
+import { columns } from "./board.ts";
 
 export const isDraggingCard = writable(false);
 
@@ -31,6 +32,32 @@ function moveElementToMousePosition(
   element.style.left = `${event.pageX - offset.x}px`;
 }
 
+function useDropZones() {
+  const columnWidth = window.innerWidth / columns.length;
+  const columnElements = document.getElementById("board").children;
+  const dropZoneClass = "bg-neutral-300";
+
+  let previousHoveredColumnIndex = null;
+
+  const adjustDropZonesOnMove = (element: HTMLElement) => {
+    const draggedCardCenterX = element.offsetLeft + element.clientWidth / 2;
+    const hoveredColumnIndex = Math.floor(draggedCardCenterX / columnWidth);
+    if (hoveredColumnIndex !== previousHoveredColumnIndex) {
+      columnElements[previousHoveredColumnIndex]?.classList.remove(
+        dropZoneClass
+      );
+      columnElements[hoveredColumnIndex].classList.add(dropZoneClass);
+      previousHoveredColumnIndex = hoveredColumnIndex;
+    }
+  };
+
+  const cleanupDropZones = () => {
+    columnElements[previousHoveredColumnIndex].classList.remove(dropZoneClass);
+  };
+
+  return { adjustDropZonesOnMove, cleanupDropZones };
+}
+
 export function drag(element: HTMLElement) {
   element.addEventListener("mousedown", (clickEvent) => {
     isDraggingCard.set(true);
@@ -41,8 +68,11 @@ export function drag(element: HTMLElement) {
     moveElementToMousePosition(clone, clickEvent, offset);
     element.classList.add("invisible");
 
+    const { adjustDropZonesOnMove, cleanupDropZones } = useDropZones();
+
     const handleMouseMove = (moveEvent: MouseEvent) => {
       moveElementToMousePosition(clone, moveEvent, offset);
+      adjustDropZonesOnMove(clone);
     };
 
     const handleMouseUp = () => {
@@ -51,6 +81,7 @@ export function drag(element: HTMLElement) {
       document.removeEventListener("mouseup", handleMouseUp);
       clone.remove();
       element.classList.remove("invisible");
+      cleanupDropZones();
     };
 
     document.addEventListener("mousemove", handleMouseMove);
