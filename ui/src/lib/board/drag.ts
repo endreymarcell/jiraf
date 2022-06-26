@@ -1,5 +1,6 @@
 import { writable } from "svelte/store";
 import { columns } from "./board.ts";
+import { changeCounter, moveCard } from "../comm/comm.ts";
 
 export const isDraggingCard = writable(false);
 
@@ -14,15 +15,6 @@ function calculateOffset(element: HTMLElement, event: MouseEvent) {
   };
 }
 
-function getClone(element: HTMLElement) {
-  const shouldCloneChildren = true;
-  const clone = element.cloneNode(shouldCloneChildren);
-  clone.style.position = "absolute";
-  clone.style.width = `${element.clientWidth + 4}px`;
-  clone.classList.add("shadow-lg");
-  return clone;
-}
-
 function moveElementToMousePosition(
   element: HTMLElement,
   event: MouseEvent,
@@ -30,6 +22,12 @@ function moveElementToMousePosition(
 ) {
   element.style.top = `${event.pageY - offset.y}px`;
   element.style.left = `${event.pageX - offset.x}px`;
+}
+
+function prepareElementForDragging(element: HTMLElement, width: number) {
+  element.style.position = "absolute";
+  element.style.width = `${width}px`;
+  element.classList.add("shadow-lg");
 }
 
 function useDropZones() {
@@ -53,6 +51,7 @@ function useDropZones() {
 
   const cleanupDropZones = () => {
     columnElements[previousHoveredColumnIndex].classList.remove(dropZoneClass);
+    return previousHoveredColumnIndex;
   };
 
   return { adjustDropZonesOnMove, cleanupDropZones };
@@ -62,26 +61,42 @@ export function drag(element: HTMLElement) {
   element.addEventListener("mousedown", (clickEvent) => {
     isDraggingCard.set(true);
 
-    const offset = calculateOffset(element, clickEvent);
-    const clone = getClone(element);
-    document.body.appendChild(clone);
-    moveElementToMousePosition(clone, clickEvent, offset);
+    const draggedClone = element.cloneNode(true);
+    prepareElementForDragging(draggedClone, element.clientWidth);
+    document.body.appendChild(draggedClone);
+
     element.classList.add("invisible");
 
+    /*
+    const placeholderClone = element.cloneNode(true);
+    placeholderClone.classList.add("invisible");
+    placeholderClone.style.position = "absolute";
+    placeholderClone.style.top = "0";
+    placeholderClone.style.left = "0";
+    document.body.appendChild(placeholderClone);
+    */
+
+    const offset = calculateOffset(element, clickEvent);
+    moveElementToMousePosition(draggedClone, clickEvent, offset);
+
     const { adjustDropZonesOnMove, cleanupDropZones } = useDropZones();
+    adjustDropZonesOnMove(draggedClone);
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      moveElementToMousePosition(clone, moveEvent, offset);
-      adjustDropZonesOnMove(clone);
+      moveElementToMousePosition(draggedClone, moveEvent, offset);
+      adjustDropZonesOnMove(draggedClone);
     };
 
     const handleMouseUp = () => {
       isDraggingCard.set(false);
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
-      clone.remove();
-      element.classList.remove("invisible");
-      cleanupDropZones();
+      draggedClone.remove();
+      // placeholderClone.remove();
+
+      const finalDropZone = cleanupDropZones();
+      moveCard(element.getAttribute("data-key"), finalDropZone);
+      changeCounter.update((value) => value + 1);
     };
 
     document.addEventListener("mousemove", handleMouseMove);
