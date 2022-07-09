@@ -89,6 +89,7 @@ async function handler(request: Request): Promise<Response> {
 const port = 6008;
 console.log(`Listening on http://localhost:${port}\nPress Ctrl-C to quit`);
 serve(handler, { port });
+loadIssues();
 
 const MINUTE = 60_000;
 const AUTO_REFRESH_INTERVAL = 10 * MINUTE;
