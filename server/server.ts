@@ -6,6 +6,9 @@ import home_dir from "https://deno.land/x/dir@v1.0.0/home_dir/mod.ts";
 
 let cache = "";
 
+const controller = new AbortController();
+const signal = controller.signal;
+
 type Credentials = {
   JIRA_API_HOST: string;
   JIRA_USERNAME: string;
@@ -83,14 +86,22 @@ async function handler(request: Request): Promise<Response> {
     await loadIssues();
     return new Response("Done.");
   }
+
+  if (request.method === "POST" && request.url.endsWith("/stop")) {
+    console.log("Stopping the server.");
+    controller.abort();
+    return new Response("Stopping.");
+  }
+
   return new Response("OK");
 }
 
 const port = 6008;
 console.log(`Listening on http://localhost:${port}\nPress Ctrl-C to quit`);
-serve(handler, { port });
+serve(handler, { port, signal });
 loadIssues();
 
 const MINUTE = 60_000;
 const AUTO_REFRESH_INTERVAL = 10 * MINUTE;
-setInterval(loadIssues, AUTO_REFRESH_INTERVAL);
+const refreshInterval = setInterval(loadIssues, AUTO_REFRESH_INTERVAL);
+signal.addEventListener("abort", () => clearInterval(refreshInterval));

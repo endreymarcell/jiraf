@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+checkout_mode="$3"
+checkout_mode_is_branch=1
+
+if [[ "$checkout_mode" = "$checkout_mode_is_branch" ]]; then
+    git_branch_prefix="$(git branch --show-current --no-color | head -c 10 | xargs)"
+    current_ticket="$(jiraf show | xargs)"
+
+    if [[ "$git_branch_prefix" = "$current_ticket" ]]; then
+        echo already matching
+      return
+    fi
+
+    num_matching_tickets="$(jiraf ls | cut -d ' ' -f 1 | grep - | grep $git_branch_prefix | wc -l)"
+    if [[ "$num_matching_tickets" -eq 1 ]]; then
+        jiraf set "$git_branch_prefix"
+    fi
+fi

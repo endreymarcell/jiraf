@@ -14,6 +14,15 @@ function get_server_uri() {
   echo "$jiraf_server_uri"
 }
 
+function is_server_running() {
+  local num_matching_processes="$(ps aux | grep [j]iraf/server/server.ts | wc -l | xargs)"
+  if [[ "$num_matching_processes" -eq 1 ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 function load_issues() {
   local server_uri="$(get_server_uri)"
   curl --silent "$server_uri/issues"
@@ -47,10 +56,12 @@ Manage Jira issues easily.
 
 Startup:
   jiraf start - start the server
+  jiraf stop - stop the server
 
 Viewing issues:
   jiraf refresh - load issues from Jira (shortcut: r)
   jiraf list - list my issues (shortcut: ls)
+  jiraf show - show the current issue's key
 
 Picking issues:
   jiraf set {id} - set the given id as the current issue
@@ -63,7 +74,33 @@ Using git:
 EOF
 }
 
-case $1 in
+function update_git_branch() {
+  if ! git status >/dev/null 2>&1; then
+    return
+  fi
+
+  local local_current_issue_id="$(cat $jiraf_issue_key_file | xargs)"
+  local current_git_branch="$(git branch --show-current --no-color)"
+
+  local is_already_matching="$(echo "$current_git_branch" | grep "$local_current_issue_id" | wc -l)"
+  if [[ "$is_already_matching" -eq 1 ]]; then
+    return
+  fi
+
+  local num_matching_branches="$(git branch --list | grep "$local_current_issue_id" | wc -l)"
+  if [[ "$num_matching_branches" -eq 1 ]]; then
+    git switch "$(git branch --list --no-color | grep "$local_current_issue_id" | sed 's/\?\[m//' | xargs)"
+  fi
+}
+
+if ! is_server_running; then
+  if [[ "$1" != start && "$1" != stop ]]; then
+    echo Please start the server first.
+    exit 1
+  fi
+fi
+
+case "$1" in
   start)
     deno run \
       --allow-net \
@@ -71,6 +108,11 @@ case $1 in
       --allow-write \
       --allow-env \
       $HOME/code/jiraf/server/server.ts
+    ;;
+
+  stop)
+    server_uri="$(get_server_uri)"
+    curl --silent -XPOST "$server_uri/stop" >/dev/null
     ;;
 
   set)
@@ -81,13 +123,18 @@ case $1 in
     fi
     echo "$2" > $jiraf_issue_key_file
     cache="$(load_issues)"
-    key_and_desc="$(echo "$cache" | grep "$2")}"
+    key_and_desc="$(echo "$cache" | grep "$2")"
     echo "$key_and_desc" | cut -d' ' -f2- > $jiraf_issue_desc_file
+    update_git_branch
     exit 0
     ;;
 
   unset)
     echo "" > $jiraf_issue_key_file
+    ;;
+
+  show)
+    cat $jiraf_issue_key_file
     ;;
 
   r*)
@@ -110,6 +157,7 @@ case $1 in
     key_and_desc="$(echo "$cache" | fzf)"
     echo "$key_and_desc" | awk '{print $1}' > $jiraf_issue_key_file
     echo "$key_and_desc" | cut -d' ' -f2- > $jiraf_issue_desc_file
+    update_git_branch
     ;;
 
   branch)
@@ -140,6 +188,11 @@ case $1 in
     prepare_pr_body "$current_issue_key"
     gh pr create --title "[$current_issue_key] $2" --label 'change:standard' --body-file $jiraf_pr_body
     gh pr view --web
+    ;;
+
+  help)
+    print_help
+    exit 0
     ;;
 
   *)
